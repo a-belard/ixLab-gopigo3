@@ -5,137 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IXLab Monitor Robot</title>
 <style>
-  body {
-    background-color: #121212;
-    font-family: Arial, sans-serif;
-    color: #90caf9;
-    text-align: center;
-    padding-top: 40px;
-  }
-  h1 { color: #64b5f6; }
-  .controls {
-    display: inline-grid;
-    grid-template-columns: 100px 100px 100px;
-    grid-template-rows: 100px 100px 100px;
-    gap: 10px;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-  .actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-  }
-  button {
-    background-color: #1e88e5;
-    color: #ffffff;
-    font-size: 16px;
-    border: none;
-    border-radius: 12px;
-    padding: 15px;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.1s;
-  }
-  button:hover { background-color: #1565c0; }
-  button:active { 
-    background-color: #0d47a1;
-    transform: scale(0.95);
-  }
+body { background-color: #121212; color: #90caf9; text-align: center; font-family: Arial, sans-serif; }
+h1 { color: #64b5f6; }
+.controls { display: inline-grid; grid-template-columns: 100px 100px 100px; grid-template-rows: 100px 100px 100px; gap:10px; justify-content:center; align-items:center; margin-bottom:20px;}
+.actions { margin-top:20px; display:flex; gap:15px; justify-content:center;}
+button { background-color: #1e88e5; color: #fff; font-size:16px; border:none; border-radius:12px; padding:15px; cursor:pointer; transition: background-color 0.3s, transform 0.1s;}
+button:hover { background-color: #1565c0; }
+button:active { background-color:#0d47a1; transform:scale(0.95);}
+img { border: 3px solid #1e88e5; max-width:90%; height:auto; margin-top:20px;}
 </style>
 </head>
 <body>
-  <h1>IXLab Monitor Robot</h1>
+<h1>IXLab Monitor Robot</h1>
 
-  <!-- Arrow Key / Directional Controls -->
-  <div class="controls">
-    <div></div>
-    <button id="forward">↑ Forward</button>
-    <div></div>
-    <button id="left">← Left</button>
-    <button id="stop">■ Stop</button>
-    <button id="right">→ Right</button>
-    <div></div>
-    <button id="backward">↓ Backward</button>
-    <div></div>
-  </div>
+{% if page=="control" %}
+<div class="controls">
+  <div></div><button id="forward">↑ Forward</button><div></div>
+  <button id="left">← Left</button><button id="stop">■ Stop</button><button id="right">→ Right</button>
+  <div></div><button id="backward">↓ Backward</button><div></div>
+</div>
 
-  <!-- Action Buttons -->
-  <div class="actions">
-    <button id="goDoor">Go to Door</button>
-    <button id="returnStart">Return to Start</button>
-    <button id="takePic">Take Picture</button>
-  </div>
+<div class="actions">
+  <button id="goDoor">Go to Door</button>
+  <button id="returnStart">Return to Start</button>
+  <button id="takePic">Take Picture</button>
+</div>
+{% elif page=="camera" %}
+<img id="video" src="/video_feed">
+{% endif %}
 
 <script>
-  const btns = {
-    forward: document.getElementById("forward"),
-    backward: document.getElementById("backward"),
-    left: document.getElementById("left"),
-    right: document.getElementById("right"),
-    stop: document.getElementById("stop")
-  };
+{% if page=="control" %}
+const btns = {forward:document.getElementById("forward"), backward:document.getElementById("backward"), left:document.getElementById("left"), right:document.getElementById("right"), stop:document.getElementById("stop")};
+let holdInterval = null;
 
-  let holdInterval = null;
+function sendCommand(direction){
+  fetch("/move",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({direction})});
+}
 
-  function sendCommand(direction) {
-    fetch("/move", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({direction})
-    });
+function startHold(direction){
+  sendCommand(direction);
+  holdInterval = setInterval(()=>sendCommand(direction),200);
+}
+
+function stopHold(){
+  clearInterval(holdInterval);
+  holdInterval=null;
+  sendCommand("stop");
+}
+
+for(const [dir,btn] of Object.entries(btns)){
+  if(dir!=="stop"){
+    btn.addEventListener("mousedown",()=>startHold(dir));
+    btn.addEventListener("mouseup", stopHold);
+    btn.addEventListener("mouseleave", stopHold);
   }
+}
+btns.stop.addEventListener("click",()=>sendCommand("stop"));
 
-  function startHold(direction) {
-    sendCommand(direction);
-    holdInterval = setInterval(() => sendCommand(direction), 200);
-  }
+document.addEventListener("keydown",(e)=>{
+  if(holdInterval)return;
+  switch(e.key){case "ArrowUp": startHold("forward"); break;
+                  case "ArrowDown": startHold("backward"); break;
+                  case "ArrowLeft": startHold("left"); break;
+                  case "ArrowRight": startHold("right"); break;
+                  case " ": sendCommand("stop"); break;}
+});
+document.addEventListener("keyup", stopHold);
 
-  function stopHold() {
-    clearInterval(holdInterval);
-    holdInterval = null;
-    sendCommand("stop");
-  }
-
-  // Directional Buttons
-  for (const [dir, btn] of Object.entries(btns)) {
-    if (dir !== "stop") {
-      btn.addEventListener("mousedown", () => startHold(dir));
-      btn.addEventListener("mouseup", stopHold);
-      btn.addEventListener("mouseleave", stopHold);
-    }
-  }
-  btns.stop.addEventListener("click", () => sendCommand("stop"));
-
-  // Keyboard control
-  document.addEventListener("keydown", (e) => {
-    if (holdInterval) return;
-    switch (e.key) {
-      case "ArrowUp": startHold("forward"); break;
-      case "ArrowDown": startHold("backward"); break;
-      case "ArrowLeft": startHold("left"); break;
-      case "ArrowRight": startHold("right"); break;
-      case " ": sendCommand("stop"); break;
-    }
-  });
-  document.addEventListener("keyup", stopHold);
-
-  // Action Buttons
-  document.getElementById("goDoor").addEventListener("click", () => {
-    fetch("/go_to_door", {method: "POST"})
-      .then(resp => resp.json())
-  });
-
-  document.getElementById("returnStart").addEventListener("click", () => {
-    fetch("/return_to_start", {method: "POST"})
-      .then(resp => resp.json())
-  });
-
-  document.getElementById("takePic").addEventListener("click", () => {
-    fetch("/take_picture", {method: "POST"})
-      .then(resp => resp.json())
-  });
+document.getElementById("goDoor").addEventListener("click", ()=>fetch("/go_to_door",{method:"POST"}));
+document.getElementById("returnStart").addEventListener("click", ()=>fetch("/return_to_start",{method:"POST"}));
+document.getElementById("takePic").addEventListener("click", ()=>fetch("/take_picture",{method:"POST"}));
+{% endif %}
 </script>
 </body>
 </html>

@@ -1,0 +1,20 @@
+body {
+  background-color: #121212;
+  color: #90caf9;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding-top: 40px;
+}
+h1 { color: #64b5f6; }
+.controls, .actions { margin: 20px auto; display: grid; gap: 10px; }
+button {
+  background-color: #1e88e5;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 16px;
+  cursor: pointer;
+}
+button:hover { background-color: #1565c0; }
+button:active { background-color: #0d47a1; transform: scale(0.95); }
