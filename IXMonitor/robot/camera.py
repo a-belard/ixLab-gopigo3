@@ -22,21 +22,34 @@ class StreamingOutput:
         if buf.startswith(b'\xff\xd8'):
             self.buffer.truncate()
             with self.condition:
-                self.frame = self.buffer.getvalue()
+                raw_frame = self.buffer.getvalue()
                 
-                # Send to face detection server (only every Nth frame)
+                # Send to face detection server and get annotated frame back
                 if self.face_server_url:
                     self.frame_count += 1
                     if self.frame_count >= self.frame_skip:
                         self.frame_count = 0
                         try:
-                            requests.post(
+                            response = requests.post(
                                 self.face_server_url, 
-                                files={'image': ('frame.jpg', self.frame, 'image/jpeg')},
+                                files={'image': ('frame.jpg', raw_frame, 'image/jpeg')}, 
                                 timeout=self.timeout
                             )
-                        except Exception as e:
-                            pass  # Silently ignore failures
+                            if response.status_code == 200:
+                                # Use annotated frame from server
+                                self.frame = response.content
+                            else:
+                                # Fallback to raw frame if server error
+                                self.frame = raw_frame
+                        except:
+                            # Fallback to raw frame on network error
+                            self.frame = raw_frame
+                    else:
+                        # Use raw frame for skipped frames
+                        self.frame = raw_frame
+                else:
+                    # No face detection server, use raw frame
+                    self.frame = raw_frame
                 
                 self.condition.notify_all()
             self.buffer.seek(0)
