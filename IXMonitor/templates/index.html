@@ -515,9 +515,23 @@ downloadBtn.addEventListener("click", ()=>{
   }
 });
 
-// Live Stream button
+// Toggle between raw feed and face detection feed
+let isFaceDetectionActive = false;
+const videoFeed = document.getElementById("videoFeed");
+const faceDetectionBtn = document.getElementById("liveStream");
+
 document.getElementById("liveStream").addEventListener("click", ()=>{
-  window.location.href = "/camera";
+  isFaceDetectionActive = !isFaceDetectionActive;
+  
+  if(isFaceDetectionActive) {
+    videoFeed.src = "/video_feed_detection";
+    faceDetectionBtn.textContent = "Raw Camera View";
+    faceDetectionBtn.style.background = "linear-gradient(135deg, #43a047 0%, #2e7d32 100%)";
+  } else {
+    videoFeed.src = "/video_feed";
+    faceDetectionBtn.textContent = "Face Detection View";
+    faceDetectionBtn.style.background = "linear-gradient(135deg, #f57c00 0%, #e65100 100%)";
+  }
 });
 </script>
 </body>
