@@ -11,7 +11,7 @@ picam2.configure(config)
 picam2.start()
 
 frame_count = 0
-FRAME_SKIP = 3  # Send every 3rd frame to detection server
+FRAME_SKIP = 2  # Send every 2nd frame to detection server
 
 def gen_frames_remote():
     """Yield MJPEG frames processed by Windows face detection server."""
