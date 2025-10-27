@@ -363,6 +363,7 @@ h1 {
   margin-top: 10px;
 }
 
+/* Tablet and below */
 @media (max-width: 1200px) {
   .main-container {
     flex-direction: column;
@@ -372,10 +373,142 @@ h1 {
     width: 100%;
     border-left: none;
     border-top: 1px solid rgba(100, 181, 246, 0.1);
+    padding: 20px;
   }
   
   .video-panel {
-    height: 50vh;
+    height: 40vh;
+    min-height: 250px;
+  }
+  
+  h1 {
+    font-size: 1.5em;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 768px) {
+  body {
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .header {
+    padding: 10px 0;
+  }
+  
+  h1 {
+    font-size: 1.3em;
+  }
+  
+  .main-container {
+    flex-direction: column;
+    min-height: calc(100vh - 50px);
+  }
+  
+  .video-panel {
+    height: 35vh;
+    min-height: 200px;
+  }
+  
+  .video-panel img {
+    object-fit: contain;
+  }
+  
+  .control-panel {
+    padding: 15px;
+    gap: 20px;
+    overflow-y: visible;
+  }
+  
+  .controls {
+    gap: 8px;
+    max-width: 100%;
+  }
+  
+  .controls button {
+    height: 60px;
+    font-size: 14px;
+  }
+  
+  .actions {
+    gap: 10px;
+  }
+  
+  .actions button {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .section-title {
+    font-size: 1em;
+    margin-bottom: 12px;
+  }
+  
+  .keyboard-hint {
+    display: none;
+  }
+  
+  /* Modal adjustments for mobile */
+  .modal-content {
+    width: 95%;
+    padding: 20px;
+    margin: 5% auto;
+  }
+  
+  .modal-content h2 {
+    font-size: 1.3em;
+  }
+  
+  .close {
+    font-size: 30px;
+    right: 15px;
+  }
+  
+  .download-btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.1em;
+  }
+  
+  .video-panel {
+    height: 30vh;
+    min-height: 180px;
+  }
+  
+  .control-panel {
+    padding: 12px;
+    gap: 15px;
+  }
+  
+  .controls {
+    gap: 6px;
+  }
+  
+  .controls button {
+    height: 55px;
+    font-size: 13px;
+  }
+  
+  .actions {
+    gap: 8px;
+  }
+  
+  .actions button {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  
+  .section-title {
+    font-size: 0.9em;
+    margin-bottom: 10px;
   }
 }
 </style>

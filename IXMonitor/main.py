@@ -70,7 +70,13 @@ def take_picture():
     """Capture a high-res photo and return it as base64."""
     from robot.camera import take_picture as capture_photo
     try:
-        filename = capture_photo()
+        # Get the existing camera instance
+        cam, _, _ = get_camera()
+        filename = capture_photo(cam)
+        
+        if filename is None:
+            return jsonify({"status": "Error", "error": "Failed to capture image"}), 500
+        
         # Read the image and encode as base64
         import base64
         with open(filename, 'rb') as f:

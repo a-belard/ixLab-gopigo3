@@ -56,22 +56,23 @@ class StreamingOutput:
         return self.buffer.write(buf)
 
 
-def take_picture(filename="door_picture.jpg"):
+def take_picture(camera_instance, filename="door_picture.jpg"):
     """Takes a photo using the existing camera instance."""
-    import picamera
-    from time import sleep
+    import os
     
-    # Create temporary camera instance for photo capture
-    with picamera.PiCamera() as cam:
-        cam.resolution = (1024, 768)
-        sleep(1)  # Allow camera to warm up
-        cam.capture(filename)
-    
-    print(f"Saved {filename}")
-    # Play audio confirmation
+    print("Taking picture...")
     try:
-        os.system('espeak "Picture taken" --stdout | aplay -D plughw:1,0 2>/dev/null')
-    except:
-        pass
-    
-    return filename
+        # Use the existing camera's capture method with still port
+        camera_instance.capture(filename, use_video_port=False, resize=(1024, 768))
+        print(f"Saved {filename}")
+        
+        # Play audio confirmation
+        try:
+            os.system('espeak "Picture taken" --stdout | aplay -D plughw:1,0 2>/dev/null')
+        except:
+            pass
+        
+        return filename
+    except Exception as e:
+        print(f"Error taking picture: {e}")
+        return None
