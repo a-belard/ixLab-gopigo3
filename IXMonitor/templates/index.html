@@ -27,6 +27,66 @@ body {
   background: rgba(30, 30, 46, 0.6);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(100, 181, 246, 0.1);
+  position: relative;
+}
+
+.battery-indicator {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 5px 10px;
+  border-radius: 15px;
+  border: 1px solid rgba(100, 181, 246, 0.2);
+}
+
+.battery-icon {
+  width: 22px;
+  height: 11px;
+  border: 1.5px solid #64b5f6;
+  border-radius: 2px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 1.5px;
+}
+
+.battery-icon::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 6px;
+  background: #64b5f6;
+  border-radius: 0 1.5px 1.5px 0;
+}
+
+.battery-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
+  border-radius: 1px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.battery-fill.medium {
+  background: linear-gradient(90deg, #ffa726 0%, #ffb74d 100%);
+}
+
+.battery-fill.low {
+  background: linear-gradient(90deg, #ef5350 0%, #e57373 100%);
+}
+
+.battery-text {
+  color: #e3f2fd;
+  font-size: 0.75em;
+  font-weight: 500;
+  min-width: 35px;
 }
 
 h1 {
@@ -152,79 +212,6 @@ h1 {
   color: #fff;
   border: none;
   border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(38, 166, 154, 0.3);
-}
-
-.actions button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(38, 166, 154, 0.5);
-}
-
-.actions button:active {
-  transform: translateY(0);
-}
-
-#takePic {
-  background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);
-  box-shadow: 0 4px 15px rgba(142, 36, 170, 0.3);
-}
-
-#takePic:hover {
-  box-shadow: 0 6px 20px rgba(142, 36, 170, 0.5);
-}
-
-#liveStream {
-  background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
-  box-shadow: 0 4px 15px rgba(245, 124, 0, 0.3);
-}
-
-#liveStream:hover {
-  box-shadow: 0 6px 20px rgba(245, 124, 0, 0.5);
-}
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.controls button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(30, 136, 229, 0.5);
-}
-
-.controls button:active::before {
-  width: 300px;
-  height: 300px;
-}
-
-.controls button:active {
-  transform: translateY(0);
-}
-
-#stop {
-  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
-  box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
-}
-
-#stop:hover {
-  box-shadow: 0 6px 20px rgba(229, 57, 53, 0.5);
-}
-
-.actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.actions button {
-  padding: 18px 24px;
-  font-size: 16px;
-  font-weight: 500;
-  background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
-  color: #fff;
-  border: none;
-  border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(38, 166, 154, 0.3);
@@ -401,6 +388,22 @@ h1 {
     font-size: 1.3em;
   }
   
+  .battery-indicator {
+    right: 15px;
+    padding: 4px 8px;
+    gap: 5px;
+  }
+  
+  .battery-icon {
+    width: 20px;
+    height: 10px;
+  }
+  
+  .battery-text {
+    font-size: 0.7em;
+    min-width: 32px;
+  }
+  
   .main-container {
     flex-direction: column;
     min-height: calc(100vh - 50px);
@@ -477,6 +480,28 @@ h1 {
     font-size: 1.1em;
   }
   
+  .battery-indicator {
+    right: 8px;
+    padding: 3px 7px;
+    gap: 4px;
+    border-radius: 12px;
+  }
+  
+  .battery-icon {
+    width: 18px;
+    height: 9px;
+  }
+  
+  .battery-icon::after {
+    width: 2px;
+    height: 5px;
+  }
+  
+  .battery-text {
+    font-size: 0.65em;
+    min-width: 28px;
+  }
+  
   .video-panel {
     height: 30vh;
     min-height: 180px;
@@ -515,6 +540,12 @@ h1 {
 <body>
 <div class="header">
   <h1>IXLab iX.1</h1>
+  <div class="battery-indicator">
+    <div class="battery-icon">
+      <div class="battery-fill" id="batteryFill"></div>
+    </div>
+    <span class="battery-text" id="batteryText">--%</span>
+  </div>
 </div>
 
 <div class="main-container">
@@ -665,6 +696,38 @@ document.getElementById("liveStream").addEventListener("click", ()=>{
     faceDetectionBtn.style.background = "linear-gradient(135deg, #f57c00 0%, #e65100 100%)";
   }
 });
+
+// Battery level update
+const batteryFill = document.getElementById("batteryFill");
+const batteryText = document.getElementById("batteryText");
+
+async function updateBattery() {
+  try {
+    const response = await fetch("/battery");
+    const data = await response.json();
+    
+    if (data.percentage !== undefined) {
+      const percentage = Math.round(data.percentage);
+      batteryText.textContent = `${percentage}%`;
+      batteryFill.style.width = `${percentage}%`;
+      
+      // Update color based on percentage
+      batteryFill.className = 'battery-fill';
+      if (percentage <= 20) {
+        batteryFill.classList.add('low');
+      } else if (percentage <= 50) {
+        batteryFill.classList.add('medium');
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching battery level:", error);
+    batteryText.textContent = "--";
+  }
+}
+
+// Update battery immediately and then every 30 seconds
+updateBattery();
+setInterval(updateBattery, 30000);
 </script>
 </body>
 </html>

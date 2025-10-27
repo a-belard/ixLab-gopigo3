@@ -89,6 +89,24 @@ def take_picture():
     except Exception as e:
         return jsonify({"status": "Error", "error": str(e)}), 500
 
+@app.route("/battery", methods=["GET"])
+def get_battery():
+    """Get the current battery voltage and percentage."""
+    try:
+        voltage = movement.gpg.get_voltage_battery()
+        # GoPiGo3 battery range: ~7V (empty) to ~12V (full)
+        # Calculate percentage based on typical Li-ion range
+        min_voltage = 7.0
+        max_voltage = 12.0
+        percentage = max(0, min(100, ((voltage - min_voltage) / (max_voltage - min_voltage)) * 100))
+        
+        return jsonify({
+            "voltage": round(voltage, 2),
+            "percentage": round(percentage, 1)
+        })
+    except Exception as e:
+        return jsonify({"voltage": 0, "percentage": 0, "error": str(e)}), 500
+
 # -----------------
 # Pages
 # -----------------
