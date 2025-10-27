@@ -60,6 +60,24 @@ def return_start():
     Thread(target=movement.return_to_start).start()
     return jsonify({"status": "Returning to start..."})
 
+@app.route("/take_picture", methods=["POST"])
+def take_picture():
+    """Capture a high-res photo and return it as base64."""
+    from robot.camera import take_picture as capture_photo
+    try:
+        filename = capture_photo()
+        # Read the image and encode as base64
+        import base64
+        with open(filename, 'rb') as f:
+            img_data = base64.b64encode(f.read()).decode('utf-8')
+        return jsonify({
+            "status": "Picture taken",
+            "image": f"data:image/jpeg;base64,{img_data}",
+            "filename": filename
+        })
+    except Exception as e:
+        return jsonify({"status": "Error", "error": str(e)}), 500
+
 # -----------------
 # Pages
 # -----------------

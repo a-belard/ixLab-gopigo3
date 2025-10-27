@@ -13,6 +13,15 @@ button { background-color: #1e88e5; color: #fff; font-size:16px; border:none; bo
 button:hover { background-color: #1565c0; }
 button:active { background-color:#0d47a1; transform:scale(0.95);}
 img { border: 3px solid #1e88e5; max-width:90%; height:auto; margin-top:20px;}
+
+/* Modal styles */
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
+.modal-content { position: relative; margin: 2% auto; padding: 20px; width: 90%; max-width: 800px; background-color: #1e1e1e; border-radius: 12px; }
+.close { position: absolute; top: 10px; right: 25px; color: #90caf9; font-size: 35px; font-weight: bold; cursor: pointer; }
+.close:hover { color: #64b5f6; }
+.modal-image { width: 100%; height: auto; border-radius: 8px; margin: 20px 0; }
+.download-btn { background-color: #43a047; padding: 12px 24px; margin: 10px; font-size: 16px; }
+.download-btn:hover { background-color: #388e3c; }
 </style>
 </head>
 <body>
@@ -27,6 +36,17 @@ img { border: 3px solid #1e88e5; max-width:90%; height:auto; margin-top:20px;}
 <div class="actions">
   <button id="goDoor">Go to Door</button>
   <button id="returnStart">Return to Start</button>
+  <button id="takePic">Take Picture</button>
+</div>
+
+<!-- Modal for displaying captured image -->
+<div id="imageModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2 style="color: #64b5f6;">Your Picture</h2>
+    <img id="capturedImage" class="modal-image" src="" alt="Captured Photo">
+    <button id="downloadBtn" class="download-btn">⬇ Download Image</button>
+  </div>
 </div>
 
 <script>
@@ -69,6 +89,52 @@ document.addEventListener("keyup", stopHold);
 
 document.getElementById("goDoor").addEventListener("click", ()=>fetch("/go_to_door",{method:"POST"}));
 document.getElementById("returnStart").addEventListener("click", ()=>fetch("/return_to_start",{method:"POST"}));
+
+// Picture taking and modal functionality
+const modal = document.getElementById("imageModal");
+const modalImg = document.getElementById("capturedImage");
+const closeBtn = document.getElementsByClassName("close")[0];
+const downloadBtn = document.getElementById("downloadBtn");
+let currentImageData = null;
+let currentFilename = null;
+
+document.getElementById("takePic").addEventListener("click", async ()=>{
+  try {
+    const response = await fetch("/take_picture", {method:"POST"});
+    const data = await response.json();
+    if(data.status === "Picture taken") {
+      currentImageData = data.image;
+      currentFilename = data.filename;
+      modalImg.src = currentImageData;
+      modal.style.display = "block";
+    } else {
+      alert("Error taking picture: " + (data.error || "Unknown error"));
+    }
+  } catch(error) {
+    alert("Error: " + error.message);
+  }
+});
+
+closeBtn.onclick = function() {
+  modal.style.display = "none";
+}
+
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+downloadBtn.addEventListener("click", ()=>{
+  if(currentImageData) {
+    const link = document.createElement('a');
+    link.href = currentImageData;
+    link.download = currentFilename || 'door_picture.jpg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+});
 </script>
 </body>
 </html>
