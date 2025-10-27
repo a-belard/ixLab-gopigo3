@@ -61,7 +61,6 @@ def take_picture(filename="door_picture.jpg"):
     import picamera
     from time import sleep
     
-    print("Taking picture...")
     # Create temporary camera instance for photo capture
     with picamera.PiCamera() as cam:
         cam.resolution = (1024, 768)
@@ -69,7 +68,7 @@ def take_picture(filename="door_picture.jpg"):
         cam.capture(filename)
     
     print(f"Saved {filename}")
-    # Play audio confirmation if available
+    # Play audio confirmation
     try:
         os.system('espeak "Picture taken" --stdout | aplay -D plughw:1,0 2>/dev/null')
     except:

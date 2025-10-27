@@ -14,20 +14,25 @@ app = Flask(__name__)
 camera_lock = Lock()
 camera = None
 output = None
+raw_output = None
 
 def get_camera():
     """Get or initialize the single camera instance."""
-    global camera, output
+    global camera, output, raw_output
     with camera_lock:
         if camera is None:
             camera = picamera.PiCamera(resolution=CAMERA_RES, framerate=CAMERA_FPS)
+            # Output with face detection for /camera page
             output = StreamingOutput(
                 face_server_url=WINDOWS_SERVER,
                 frame_skip=DETECTION_FRAME_SKIP,
                 timeout=DETECTION_TIMEOUT
             )
-            camera.start_recording(output, format='mjpeg')
-        return camera, output
+            # Raw output without face detection for main page
+            raw_output = StreamingOutput(face_server_url=None)
+            camera.start_recording(output, format='mjpeg', splitter_port=1)
+            camera.start_recording(raw_output, format='mjpeg', splitter_port=2)
+        return camera, output, raw_output
 
 # -----------------
 # Robot API
@@ -94,8 +99,23 @@ def camera_page():
 # -----------------
 @app.route("/video_feed")
 def video_feed():
-    """Video streaming route."""
-    _, stream_output = get_camera()
+    """Raw video streaming route (no face detection) for main page."""
+    _, _, raw_stream = get_camera()
+    
+    def generate():
+        while True:
+            with raw_stream.condition:
+                raw_stream.condition.wait()
+                frame = raw_stream.frame
+            yield (b"--FRAME\r\n"
+                   b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
+    
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=FRAME')
+
+@app.route("/video_feed_detection")
+def video_feed_detection():
+    """Video streaming route with face detection for /camera page."""
+    _, stream_output, _ = get_camera()
     
     def generate():
         while True:

@@ -5,47 +5,428 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IXLab Monitor Robot</title>
 <style>
-body { background-color: #121212; color: #90caf9; text-align: center; font-family: Arial, sans-serif; }
-h1 { color: #64b5f6; }
-.controls { display: inline-grid; grid-template-columns: 100px 100px 100px; grid-template-rows: 100px 100px 100px; gap:10px; justify-content:center; align-items:center; margin-bottom:20px;}
-.actions { margin-top:20px; display:flex; gap:15px; justify-content:center;}
-button { background-color: #1e88e5; color: #fff; font-size:16px; border:none; border-radius:12px; padding:15px; cursor:pointer; transition: background-color 0.3s, transform 0.1s;}
-button:hover { background-color: #1565c0; }
-button:active { background-color:#0d47a1; transform:scale(0.95);}
-img { border: 3px solid #1e88e5; max-width:90%; height:auto; margin-top:20px;}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
+  color: #e3f2fd;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  text-align: center;
+  padding: 15px 0;
+  background: rgba(30, 30, 46, 0.6);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(100, 181, 246, 0.1);
+}
+
+h1 {
+  color: #64b5f6;
+  font-size: 1.8em;
+  font-weight: 600;
+  text-shadow: 0 0 20px rgba(100, 181, 246, 0.5);
+}
+
+.main-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.video-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  padding: 20px;
+}
+
+.video-panel img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.control-panel {
+  width: 500px;
+  background: rgba(30, 30, 46, 0.8);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid rgba(100, 181, 246, 0.1);
+  padding: 30px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.section-title {
+  color: #90caf9;
+  font-size: 1.1em;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0 auto;
+  max-width: 350px;
+}
+
+.controls button {
+  height: 70px;
+  font-size: 16px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(30, 136, 229, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.controls button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30, 136, 229, 0.5);
+}
+
+.controls button:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+.controls button:active {
+  transform: translateY(0);
+}
+
+#stop {
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+  box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
+}
+
+#stop:hover {
+  box-shadow: 0 6px 20px rgba(229, 57, 53, 0.5);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.actions button {
+  padding: 14px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(38, 166, 154, 0.3);
+}
+
+.actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(38, 166, 154, 0.5);
+}
+
+.actions button:active {
+  transform: translateY(0);
+}
+
+#takePic {
+  background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);
+  box-shadow: 0 4px 15px rgba(142, 36, 170, 0.3);
+}
+
+#takePic:hover {
+  box-shadow: 0 6px 20px rgba(142, 36, 170, 0.5);
+}
+
+#liveStream {
+  background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+  box-shadow: 0 4px 15px rgba(245, 124, 0, 0.3);
+}
+
+#liveStream:hover {
+  box-shadow: 0 6px 20px rgba(245, 124, 0, 0.5);
+}
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.controls button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(30, 136, 229, 0.5);
+}
+
+.controls button:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+.controls button:active {
+  transform: translateY(0);
+}
+
+#stop {
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+  box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
+}
+
+#stop:hover {
+  box-shadow: 0 6px 20px rgba(229, 57, 53, 0.5);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.actions button {
+  padding: 18px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #26a69a 0%, #00897b 100%);
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(38, 166, 154, 0.3);
+}
+
+.actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(38, 166, 154, 0.5);
+}
+
+.actions button:active {
+  transform: translateY(0);
+}
+
+#takePic {
+  background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);
+  box-shadow: 0 4px 15px rgba(142, 36, 170, 0.3);
+}
+
+#takePic:hover {
+  box-shadow: 0 6px 20px rgba(142, 36, 170, 0.5);
+}
+
+#liveStream {
+  background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+  box-shadow: 0 4px 15px rgba(245, 124, 0, 0.3);
+}
+
+#liveStream:hover {
+  box-shadow: 0 6px 20px rgba(245, 124, 0, 0.5);
+}
 
 /* Modal styles */
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.9); }
-.modal-content { position: relative; margin: 2% auto; padding: 20px; width: 90%; max-width: 800px; background-color: #1e1e1e; border-radius: 12px; }
-.close { position: absolute; top: 10px; right: 25px; color: #90caf9; font-size: 35px; font-weight: bold; cursor: pointer; }
-.close:hover { color: #64b5f6; }
-.modal-image { width: 100%; height: auto; border-radius: 8px; margin: 20px 0; }
-.download-btn { background-color: #43a047; padding: 12px 24px; margin: 10px; font-size: 16px; }
-.download-btn:hover { background-color: #388e3c; }
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.95);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  position: relative;
+  margin: 2% auto;
+  padding: 30px;
+  width: 90%;
+  max-width: 800px;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3a 100%);
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(100, 181, 246, 0.2);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.close {
+  position: absolute;
+  top: 15px;
+  right: 25px;
+  color: #90caf9;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close:hover {
+  color: #64b5f6;
+  transform: rotate(90deg);
+}
+
+.modal-content h2 {
+  color: #64b5f6;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.8em;
+}
+
+.modal-image {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  margin: 20px 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.download-btn {
+  background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+  color: white;
+  padding: 14px 28px;
+  margin: 10px auto;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: block;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(67, 160, 71, 0.3);
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(67, 160, 71, 0.5);
+}
+
+.download-btn:active {
+  transform: translateY(0);
+}
+
+/* Keyboard hint */
+.keyboard-hint {
+  text-align: center;
+  color: #90caf9;
+  opacity: 0.6;
+  font-size: 0.85em;
+  margin-top: 10px;
+}
+
+@media (max-width: 1200px) {
+  .main-container {
+    flex-direction: column;
+  }
+  
+  .control-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(100, 181, 246, 0.1);
+  }
+  
+  .video-panel {
+    height: 50vh;
+  }
+}
 </style>
 </head>
 <body>
-<h1>IXLab Monitor Robot</h1>
-
-<div class="controls">
-  <div></div><button id="forward">↑ Forward</button><div></div>
-  <button id="left">← Left</button><button id="stop">■ Stop</button><button id="right">→ Right</button>
-  <div></div><button id="backward">↓ Backward</button><div></div>
+<div class="header">
+  <h1>IXLab iX.1</h1>
 </div>
 
-<div class="actions">
-  <button id="goDoor">Go to Door</button>
-  <button id="returnStart">Return to Start</button>
-  <button id="takePic">Take Picture</button>
+<div class="main-container">
+  <!-- Left Panel: Video Feed -->
+  <div class="video-panel">
+    <img id="videoFeed" src="/video_feed" alt="Camera Feed">
+  </div>
+
+  <!-- Right Panel: Controls -->
+  <div class="control-panel">
+    <div>
+      <div class="controls">
+        <div></div>
+        <button id="forward">↑<br>Forward</button>
+        <div></div>
+        <button id="left">←<br>Left</button>
+        <button id="stop">■<br>Stop</button>
+        <button id="right">→<br>Right</button>
+        <div></div>
+        <button id="backward">↓<br>Backward</button>
+        <div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="actions">
+        <button id="goDoor">Go to Door</button>
+        <button id="returnStart">Return to Start</button>
+        <button id="takePic">Take Picture</button>
+        <button id="liveStream">Face Detection View</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal for displaying captured image -->
 <div id="imageModal" class="modal">
   <div class="modal-content">
     <span class="close">&times;</span>
-    <h2 style="color: #64b5f6;">Your Picture</h2>
+    <h2>Captured Image</h2>
     <img id="capturedImage" class="modal-image" src="" alt="Captured Photo">
-    <button id="downloadBtn" class="download-btn">⬇ Download Image</button>
+    <button id="downloadBtn" class="download-btn">Download Image</button>
   </div>
 </div>
 
@@ -134,6 +515,11 @@ downloadBtn.addEventListener("click", ()=>{
     link.click();
     document.body.removeChild(link);
   }
+});
+
+// Live Stream button
+document.getElementById("liveStream").addEventListener("click", ()=>{
+  window.location.href = "/camera";
 });
 </script>
 </body>
