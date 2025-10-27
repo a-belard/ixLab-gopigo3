@@ -1,0 +1,4 @@
+Flask==2.3.3
+picamera==1.13
+easygopigo3
+requests==2.31.0

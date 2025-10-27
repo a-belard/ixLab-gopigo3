@@ -18,7 +18,6 @@ img { border: 3px solid #1e88e5; max-width:90%; height:auto; margin-top:20px;}
 <body>
 <h1>IXLab Monitor Robot</h1>
 
-{% if page=="control" %}
 <div class="controls">
   <div></div><button id="forward">↑ Forward</button><div></div>
   <button id="left">← Left</button><button id="stop">■ Stop</button><button id="right">→ Right</button>
@@ -28,14 +27,9 @@ img { border: 3px solid #1e88e5; max-width:90%; height:auto; margin-top:20px;}
 <div class="actions">
   <button id="goDoor">Go to Door</button>
   <button id="returnStart">Return to Start</button>
-  <button id="takePic">Take Picture</button>
 </div>
-{% elif page=="camera" %}
-<img id="video" src="/video_feed">
-{% endif %}
 
 <script>
-{% if page=="control" %}
 const btns = {forward:document.getElementById("forward"), backward:document.getElementById("backward"), left:document.getElementById("left"), right:document.getElementById("right"), stop:document.getElementById("stop")};
 let holdInterval = null;
 
@@ -47,6 +41,37 @@ function startHold(direction){
   sendCommand(direction);
   holdInterval = setInterval(()=>sendCommand(direction),200);
 }
+
+function stopHold(){
+  clearInterval(holdInterval);
+  holdInterval=null;
+  sendCommand("stop");
+}
+
+for(const [dir,btn] of Object.entries(btns)){
+  if(dir!=="stop"){
+    btn.addEventListener("mousedown",()=>startHold(dir));
+    btn.addEventListener("mouseup", stopHold);
+    btn.addEventListener("mouseleave", stopHold);
+  }
+}
+btns.stop.addEventListener("click",()=>sendCommand("stop"));
+
+document.addEventListener("keydown",(e)=>{
+  if(holdInterval)return;
+  switch(e.key){case "ArrowUp": startHold("forward"); break;
+                  case "ArrowDown": startHold("backward"); break;
+                  case "ArrowLeft": startHold("left"); break;
+                  case "ArrowRight": startHold("right"); break;
+                  case " ": sendCommand("stop"); break;}
+});
+document.addEventListener("keyup", stopHold);
+
+document.getElementById("goDoor").addEventListener("click", ()=>fetch("/go_to_door",{method:"POST"}));
+document.getElementById("returnStart").addEventListener("click", ()=>fetch("/return_to_start",{method:"POST"}));
+</script>
+</body>
+</html>
 
 function stopHold(){
   clearInterval(holdInterval);
