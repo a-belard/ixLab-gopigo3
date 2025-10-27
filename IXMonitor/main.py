@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template, Response
 from threading import Thread, Lock
 from robot import movement
 from robot.camera import StreamingOutput
-from config import WINDOWS_SERVER, CAMERA_RES
+from config import WINDOWS_SERVER, CAMERA_RES, CAMERA_FPS, DETECTION_FRAME_SKIP, DETECTION_TIMEOUT
 import picamera
 
 app = Flask(__name__)
@@ -20,8 +20,12 @@ def get_camera():
     global camera, output
     with camera_lock:
         if camera is None:
-            camera = picamera.PiCamera(resolution=CAMERA_RES, framerate=15)
-            output = StreamingOutput(face_server_url=WINDOWS_SERVER)
+            camera = picamera.PiCamera(resolution=CAMERA_RES, framerate=CAMERA_FPS)
+            output = StreamingOutput(
+                face_server_url=WINDOWS_SERVER,
+                frame_skip=DETECTION_FRAME_SKIP,
+                timeout=DETECTION_TIMEOUT
+            )
             camera.start_recording(output, format='mjpeg')
         return camera, output
 

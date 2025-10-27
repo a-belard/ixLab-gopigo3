@@ -7,23 +7,37 @@ from threading import Condition
 class StreamingOutput:
     """
     Handles MJPEG stream and sends frames to Windows face detection server.
+    Optimized for performance with frame skipping.
     """
-    def __init__(self, face_server_url=None):
+    def __init__(self, face_server_url=None, frame_skip=3, timeout=0.5):
         self.frame = None
         self.buffer = io.BytesIO()
         self.condition = Condition()
         self.face_server_url = face_server_url
+        self.frame_skip = frame_skip
+        self.timeout = timeout
+        self.frame_count = 0
 
     def write(self, buf):
         if buf.startswith(b'\xff\xd8'):
             self.buffer.truncate()
             with self.condition:
                 self.frame = self.buffer.getvalue()
+                
+                # Send to face detection server (only every Nth frame)
                 if self.face_server_url:
-                    try:
-                        requests.post(self.face_server_url, files={'frame': self.frame}, timeout=0.05)
-                    except:
-                        pass
+                    self.frame_count += 1
+                    if self.frame_count >= self.frame_skip:
+                        self.frame_count = 0
+                        try:
+                            requests.post(
+                                self.face_server_url, 
+                                files={'frame': self.frame}, 
+                                timeout=self.timeout
+                            )
+                        except:
+                            pass  # Silently ignore failures
+                
                 self.condition.notify_all()
             self.buffer.seek(0)
         return self.buffer.write(buf)
