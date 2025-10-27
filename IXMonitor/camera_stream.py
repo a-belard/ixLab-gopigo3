@@ -26,7 +26,7 @@ def gen_frames_remote():
         if frame_count >= FRAME_SKIP:
             frame_count = 0
             _, buffer = cv2.imencode('.jpg', frame)
-            files = {'file': ('frame.jpg', buffer.tobytes(), 'image/jpeg')}
+            files = {'image': ('frame.jpg', buffer.tobytes(), 'image/jpeg')}
             try:
                 resp = requests.post(WINDOWS_SERVER, files=files, timeout=0.5)
                 img_array = np.frombuffer(resp.content, np.uint8)

@@ -32,10 +32,10 @@ class StreamingOutput:
                         try:
                             requests.post(
                                 self.face_server_url, 
-                                files={'frame': self.frame}, 
+                                files={'image': ('frame.jpg', self.frame, 'image/jpeg')},
                                 timeout=self.timeout
                             )
-                        except:
+                        except Exception as e:
                             pass  # Silently ignore failures
                 
                 self.condition.notify_all()
