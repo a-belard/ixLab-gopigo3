@@ -72,36 +72,3 @@ document.getElementById("returnStart").addEventListener("click", ()=>fetch("/ret
 </script>
 </body>
 </html>
-
-function stopHold(){
-  clearInterval(holdInterval);
-  holdInterval=null;
-  sendCommand("stop");
-}
-
-for(const [dir,btn] of Object.entries(btns)){
-  if(dir!=="stop"){
-    btn.addEventListener("mousedown",()=>startHold(dir));
-    btn.addEventListener("mouseup", stopHold);
-    btn.addEventListener("mouseleave", stopHold);
-  }
-}
-btns.stop.addEventListener("click",()=>sendCommand("stop"));
-
-document.addEventListener("keydown",(e)=>{
-  if(holdInterval)return;
-  switch(e.key){case "ArrowUp": startHold("forward"); break;
-                  case "ArrowDown": startHold("backward"); break;
-                  case "ArrowLeft": startHold("left"); break;
-                  case "ArrowRight": startHold("right"); break;
-                  case " ": sendCommand("stop"); break;}
-});
-document.addEventListener("keyup", stopHold);
-
-document.getElementById("goDoor").addEventListener("click", ()=>fetch("/go_to_door",{method:"POST"}));
-document.getElementById("returnStart").addEventListener("click", ()=>fetch("/return_to_start",{method:"POST"}));
-document.getElementById("takePic").addEventListener("click", ()=>fetch("/take_picture",{method:"POST"}));
-{% endif %}
-</script>
-</body>
-</html>
