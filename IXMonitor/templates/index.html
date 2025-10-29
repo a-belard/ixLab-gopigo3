@@ -93,7 +93,6 @@ h1 {
   color: #64b5f6;
   font-size: 1.8em;
   font-weight: 600;
-  text-shadow: 0 0 20px rgba(100, 181, 246, 0.5);
 }
 
 .main-container {
@@ -242,6 +241,114 @@ h1 {
 
 #liveStream:hover {
   box-shadow: 0 6px 20px rgba(245, 124, 0, 0.5);
+}
+
+/* Chat Interface Styles */
+.chat-section {
+  background: rgba(20, 20, 35, 0.5);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(100, 181, 246, 0.1);
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 12px 15px;
+  background: rgba(30, 30, 46, 0.8);
+  border: 1px solid rgba(100, 181, 246, 0.2);
+  border-radius: 12px;
+  color: #e3f2fd;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.chat-input:focus {
+  border-color: #64b5f6;
+  box-shadow: 0 0 10px rgba(100, 181, 246, 0.3);
+}
+
+.chat-input::placeholder {
+  color: rgba(227, 242, 253, 0.5);
+}
+
+.chat-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.chat-btn {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #5e35b1 0%, #4527a0 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(94, 53, 177, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.chat-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(94, 53, 177, 0.5);
+}
+
+.chat-btn:active {
+  transform: translateY(0);
+}
+
+.chat-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.chat-btn.recording {
+  background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+  box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.chat-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(30, 30, 46, 0.6);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #90caf9;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  border-left: 3px solid #64b5f6;
+}
+
+.chat-status.error {
+  color: #ef5350;
+  border-left-color: #ef5350;
+}
+
+.chat-status.success {
+  color: #66bb6a;
+  border-left-color: #66bb6a;
 }
 
 /* Modal styles */
@@ -534,6 +641,25 @@ h1 {
     font-size: 0.9em;
     margin-bottom: 10px;
   }
+  
+  .chat-section {
+    padding: 12px;
+  }
+  
+  .chat-input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .chat-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .chat-status {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
 }
 </style>
 </head>
@@ -576,6 +702,21 @@ h1 {
         <button id="returnStart">Return to Start</button>
         <button id="takePic">Take Picture</button>
         <button id="liveStream">Face Detection View</button>
+      </div>
+    </div>
+
+    <!-- Chat Section -->
+    <div class="chat-section">
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" class="chat-input" placeholder="...">
+      </div>
+      <div class="chat-buttons">
+        <button id="sendTextBtn" class="chat-btn">
+          Send
+        </button>
+        <button id="recordBtn" class="chat-btn">
+          <span id="recordBtnText">Record</span>
+        </button>
       </div>
     </div>
   </div>
@@ -728,6 +869,123 @@ async function updateBattery() {
 // Update battery immediately and then every 30 seconds
 updateBattery();
 setInterval(updateBattery, 30000);
+
+// Chat functionality
+const chatInput = document.getElementById("chatInput");
+const sendTextBtn = document.getElementById("sendTextBtn");
+const recordBtn = document.getElementById("recordBtn");
+const recordBtnText = document.getElementById("recordBtnText");
+
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+
+// Send text message
+async function sendTextMessage() {
+  const text = chatInput.value.trim();
+  if (!text) {
+    return;
+  }
+
+  sendTextBtn.disabled = true;
+
+  try {
+    const response = await fetch("/chat/text", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ text: text, speak: true })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      chatInput.value = "";
+    }
+  } catch (error) {
+    console.error("Error sending message:", error);
+  } finally {
+    sendTextBtn.disabled = false;
+  }
+}
+
+// Record and send audio using browser microphone
+async function toggleRecording() {
+  if (!isRecording) {
+    // Start recording
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+      
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Create audio blob
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.wav');
+          
+          const response = await fetch("/chat/record", {
+            method: "POST",
+            body: formData
+          });
+          
+          await response.json();
+        } catch (error) {
+          console.error("Error sending audio:", error);
+        } finally {
+          recordBtn.disabled = false;
+          sendTextBtn.disabled = false;
+        }
+      };
+      
+      // Start recording
+      mediaRecorder.start();
+      isRecording = true;
+      recordBtn.classList.add('recording');
+      recordBtnText.textContent = "Stop";
+      sendTextBtn.disabled = true;
+      
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+    }
+  } else {
+    // Stop recording
+    stopRecording();
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    isRecording = false;
+    recordBtn.classList.remove('recording');
+    recordBtnText.textContent = "Record";
+    recordBtn.disabled = true; // Will be re-enabled after processing
+  }
+}
+
+// Event listeners
+sendTextBtn.addEventListener("click", sendTextMessage);
+recordBtn.addEventListener("click", toggleRecording);
+
+chatInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    sendTextMessage();
+  }
+});
+</script>
+</body>
+</html>
+```
 </script>
 </body>
 </html>

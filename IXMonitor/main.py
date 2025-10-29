@@ -108,6 +108,84 @@ def get_battery():
         return jsonify({"voltage": 0, "percentage": 0, "error": str(e)}), 500
 
 # -----------------
+# Chat/Audio API
+# -----------------
+@app.route("/chat/text", methods=["POST"])
+def chat_text():
+    """Send text message to AI server and get response."""
+    from robot.audio import send_text_to_server, play_audio_message
+    
+    data = request.get_json()
+    text = data.get("text", "").strip()
+    speak = data.get("speak", True)
+    
+    if not text:
+        return jsonify({"success": False, "error": "Text cannot be empty"}), 400
+    
+    try:
+        # Send to server
+        result = send_text_to_server(text)
+        
+        if result["success"] and speak:
+            # Play the response
+            ai_response = result.get("ai_response", "")
+            Thread(target=play_audio_message, args=(ai_response,)).start()
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/chat/record", methods=["POST"])
+def chat_record():
+    """Receive audio from client browser, send to server, and play response."""
+    from robot.audio import send_audio_to_server, play_audio_message
+    import os
+    import tempfile
+    
+    # Check if audio file is in the request
+    if 'audio' not in request.files:
+        return jsonify({"success": False, "error": "No audio file received"}), 400
+    
+    audio_file = request.files['audio']
+    
+    if audio_file.filename == '':
+        return jsonify({"success": False, "error": "Empty audio file"}), 400
+    
+    # Save audio to temporary file
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')
+    temp_path = temp_file.name
+    temp_file.close()
+    
+    try:
+        audio_file.save(temp_path)
+        
+        # Send to Windows server
+        result = send_audio_to_server(temp_path)
+        
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
+        # Play the AI response on robot speaker
+        if result["success"]:
+            ai_response = result.get("ai_response", "")
+            Thread(target=play_audio_message, args=(ai_response,)).start()
+        
+        return jsonify(result)
+    except Exception as e:
+        # Clean up temp file on error
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/chat/reset", methods=["POST"])
+def chat_reset():
+    """Reset conversation history."""
+    from robot.audio import reset_conversation
+    result = reset_conversation()
+    return jsonify(result)
+
+# -----------------
 # Pages
 # -----------------
 @app.route("/")
