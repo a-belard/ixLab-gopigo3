@@ -7,18 +7,19 @@ from config import WINDOWS_SERVER_BASE
 
 def play_audio_message(text):
     """
-    Convert text to speech and play it using espeak.
-    This plays on the robot's speaker.
+    Convert text to speech and play it using espeak with ALSA output.
+    This plays on the robot's speaker using ALSA configuration.
     """
     try:
-        # Using espeak to play text-to-speech on robot
-        subprocess.run(['espeak', text], check=True, stderr=subprocess.DEVNULL)
+        # Using espeak with ALSA output device (matching picture taken sound)
+        espeak_cmd = f'espeak "{text}" --stdout | aplay -D plughw:1,0 2>/dev/null'
+        subprocess.run(espeak_cmd, shell=True, check=True)
         return True
     except subprocess.CalledProcessError as e:
         print(f"Error playing audio: {e}")
         return False
-    except FileNotFoundError:
-        print("espeak not found. Install it: sudo apt-get install espeak")
+    except FileNotFoundError as e:
+        print(f"Audio tool not found: {e}. Install with: sudo apt-get install espeak alsa-utils")
         return False
 
 def send_text_to_server(text, reset_history=False):
