@@ -21,31 +21,47 @@ def capture_frame_from_camera(camera_instance):
     stream.seek(0)
     return stream.read()
 
-def execute_action(action: str):
-    """Execute robot movement action with obstacle avoidance"""
+def execute_action(action: str, speed_mode: str = "normal"):
+    """
+    Execute robot movement action with obstacle avoidance and speed control.
+    
+    :param action: Movement action (forward, backward, left, right, stop, complete)
+    :param speed_mode: Speed setting - "slow", "normal", or "fast"
+    """
     action = action.lower().strip()
     
+    # Map speed mode to actual speed values
+    from .movement import NORMAL_SPEED, FAST_SPEED, SLOW_SPEED
+    speed_map = {
+        "slow": SLOW_SPEED,
+        "normal": NORMAL_SPEED,
+        "fast": FAST_SPEED
+    }
+    speed = speed_map.get(speed_mode, NORMAL_SPEED)
+    
     if action == "forward":
-        print("Moving forward")
+        print(f"Moving forward ({speed_mode} speed)")
         # Check for obstacles before moving forward
         distance = get_obstacle_distance()
         if distance is not None and distance < 25:
             print(f"Obstacle detected at {distance}cm - stopping")
             stop_robot()
             return False
-        result = move_forward(distance_m=0.3, blocking=True, check_obstacles=True)
+        
+        # Use longer distance for continuous forward movement
+        result = move_forward(distance_m=0.5, blocking=True, check_obstacles=True, speed=speed)
         if not result:
             print("Obstacle encountered during movement")
         return False
     elif action == "backward":
-        print("Moving backward")
-        move_backward(distance_m=0.2, blocking=True)
+        print(f"Moving backward ({speed_mode} speed)")
+        move_backward(distance_m=0.3, blocking=True, speed=speed)
     elif action == "left":
-        print("Turning left")
-        turn_left(angle_deg=30, blocking=True)
+        print(f"Turning left ({speed_mode} speed)")
+        turn_left(angle_deg=30, blocking=True, speed=speed)
     elif action == "right":
-        print("Turning right")
-        turn_right(angle_deg=30, blocking=True)
+        print(f"Turning right ({speed_mode} speed)")
+        turn_right(angle_deg=30, blocking=True, speed=speed)
     elif action == "stop":
         print("Stopping")
         stop_robot()
@@ -89,13 +105,14 @@ def get_autonomous_decision(image_bytes: bytes, goal: str, previous_actions: lis
         }
 
 def autonomous_navigation_loop(camera_instance, goal: str, max_actions: int = 20):
-    """Main autonomous navigation loop"""
-    print(f"\nStarting autonomous navigation")
+    """Main autonomous navigation loop with speed optimization"""
+    print(f"\nStarting autonomous navigation (FAST mode)")
     print(f"Goal: {goal}")
     print(f"Max actions: {max_actions}\n")
     
     action_history = []
     action_count = 0
+    consecutive_forward = 0  # Track consecutive forward moves for speed boost
     
     try:
         # Notify server to start autonomous mode
@@ -109,51 +126,65 @@ def autonomous_navigation_loop(camera_instance, goal: str, max_actions: int = 20
     
     while not autonomous_stop_event.is_set() and action_count < max_actions:
         try:
-            # Check for obstacles before capturing frame
-            distance = get_obstacle_distance()
-            if distance is not None:
-                print(f"Distance sensor: {distance}cm")
+            loop_start = time.time()
             
-            # Capture current frame
+            # Quick distance check
+            distance = get_obstacle_distance()
+            if distance is not None and distance < 20:
+                print(f"⚠️ Close obstacle: {distance}cm")
+            
+            # Capture frame
             print(f"\n[Action {action_count + 1}/{max_actions}]")
-            print("Capturing frame...")
             frame_bytes = capture_frame_from_camera(camera_instance)
             
-            # Get decision from AI
-            print("Analyzing scene and making decision...")
+            # Get decision from AI (optimized prompts for speed)
+            decision_start = time.time()
             result = get_autonomous_decision(frame_bytes, goal, action_history)
+            decision_time = time.time() - decision_start
+            print(f"⚡ AI decision: {decision_time:.2f}s")
             
             if not result.get("success"):
-                print(f"Decision failed: {result.get('error')}")
+                print(f"❌ Decision failed: {result.get('error')}")
                 break
             
             decision = result.get("decision", {})
             
-            # Display AI's analysis
-            print(f"\nObservation: {decision.get('observation', 'N/A')}")
-            print(f"Reasoning: {decision.get('reasoning', 'N/A')}")
-            print(f"Progress: {decision.get('progress', 'N/A')}")
-            print(f"Action: {decision.get('action', 'stop')}")
+            # Compact output
+            print(f"👁️ {decision.get('observation', 'N/A')[:60]}...")
+            print(f"🧠 {decision.get('reasoning', 'N/A')[:60]}...")
+            print(f"📊 Progress: {decision.get('progress', 'N/A')}")
             
-            # Execute action
+            # Execute action with speed control
             action = decision.get('action', 'stop')
             action_history.append(action)
             action_count += 1
             
-            completed = execute_action(action)
+            # Determine speed based on consecutive forward moves
+            if action == "forward":
+                consecutive_forward += 1
+                speed_mode = "fast" if consecutive_forward >= 2 else "normal"
+            else:
+                consecutive_forward = 0
+                speed_mode = "normal"
+            
+            print(f"🤖 Action: {action.upper()} ({speed_mode})")
+            completed = execute_action(action, speed_mode)
             
             if completed or action == "complete":
-                print("\nGoal achieved! Stopping autonomous mode.")
+                print("\n✅ Goal achieved!")
                 break
             
-            # Small delay between actions for safety
-            time.sleep(0.5)
+            loop_time = time.time() - loop_start
+            print(f"⏱️ Loop time: {loop_time:.2f}s")
+            
+            # Minimal delay for fast navigation
+            time.sleep(0.2)
             
         except KeyboardInterrupt:
-            print("\nAutonomous mode interrupted by user")
+            print("\n⏹️ Stopped by user")
             break
         except Exception as e:
-            print(f"\nError in autonomous loop: {e}")
+            print(f"\n❌ Error: {e}")
             break
     
     # Final stop
