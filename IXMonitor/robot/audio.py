@@ -5,14 +5,23 @@ import tempfile
 import requests
 from config import WINDOWS_SERVER_BASE
 
-def play_audio_message(text):
+def play_audio_message(text, voice="en-us+f3"):
     """
     Convert text to speech and play it using espeak with ALSA output.
     This plays on the robot's speaker using ALSA configuration.
+    
+    Voice options:
+    - "en-us+f3" - American female (default, clear)
+    - "en-us+f1" - American female (softer)
+    - "en-us+f2" - American female (deeper)
+    - "en-us+f4" - American female (higher)
+    - "en-us+m1" - American male (default male)
+    - "en+f3" - British female
+    - "en+m1" - British male
     """
     try:
-        # Using espeak with ALSA output device (matching picture taken sound)
-        espeak_cmd = f'espeak "{text}" --stdout | aplay -D plughw:1,0 2>/dev/null'
+        # Using espeak with specified voice and ALSA output device
+        espeak_cmd = f'espeak -v {voice} "{text}" --stdout | aplay -D plughw:1,0 2>/dev/null'
         subprocess.run(espeak_cmd, shell=True, check=True)
         return True
     except subprocess.CalledProcessError as e:
