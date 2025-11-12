@@ -92,7 +92,7 @@ def get_autonomous_decision(image_bytes: bytes, goal: str, previous_actions: lis
         return response.json()
         
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error getting decision: {e}")
+        print(f"Error getting decision: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -131,7 +131,7 @@ def autonomous_navigation_loop(camera_instance, goal: str, max_actions: int = 20
             # Quick distance check
             distance = get_obstacle_distance()
             if distance is not None and distance < 20:
-                print(f"⚠️ Close obstacle: {distance}cm")
+                print(f"WARNING: Close obstacle: {distance}cm")
             
             # Capture frame
             print(f"\n[Action {action_count + 1}/{max_actions}]")
@@ -141,18 +141,18 @@ def autonomous_navigation_loop(camera_instance, goal: str, max_actions: int = 20
             decision_start = time.time()
             result = get_autonomous_decision(frame_bytes, goal, action_history)
             decision_time = time.time() - decision_start
-            print(f"⚡ AI decision: {decision_time:.2f}s")
+            print(f"AI decision: {decision_time:.2f}s")
             
             if not result.get("success"):
-                print(f"❌ Decision failed: {result.get('error')}")
+                print(f"Decision failed: {result.get('error')}")
                 break
             
             decision = result.get("decision", {})
             
             # Compact output
-            print(f"👁️ {decision.get('observation', 'N/A')[:60]}...")
-            print(f"🧠 {decision.get('reasoning', 'N/A')[:60]}...")
-            print(f"📊 Progress: {decision.get('progress', 'N/A')}")
+            print(f"Observation: {decision.get('observation', 'N/A')[:60]}...")
+            print(f"Reasoning: {decision.get('reasoning', 'N/A')[:60]}...")
+            print(f"Progress: {decision.get('progress', 'N/A')}")
             
             # Execute action with speed control
             action = decision.get('action', 'stop')
@@ -167,24 +167,24 @@ def autonomous_navigation_loop(camera_instance, goal: str, max_actions: int = 20
                 consecutive_forward = 0
                 speed_mode = "normal"
             
-            print(f"🤖 Action: {action.upper()} ({speed_mode})")
+            print(f"Action: {action.upper()} ({speed_mode})")
             completed = execute_action(action, speed_mode)
             
             if completed or action == "complete":
-                print("\n✅ Goal achieved!")
+                print("\nGoal achieved!")
                 break
             
             loop_time = time.time() - loop_start
-            print(f"⏱️ Loop time: {loop_time:.2f}s")
+            print(f"Loop time: {loop_time:.2f}s")
             
             # Minimal delay for fast navigation
             time.sleep(0.2)
             
         except KeyboardInterrupt:
-            print("\n⏹️ Stopped by user")
+            print("\nStopped by user")
             break
         except Exception as e:
-            print(f"\n❌ Error: {e}")
+            print(f"\nError: {e}")
             break
     
     # Final stop

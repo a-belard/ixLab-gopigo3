@@ -297,15 +297,19 @@ def video_feed_detection():
     """Video streaming route with face detection."""
     cam, stream_output, _ = get_camera()
     
-    # Start face detection recording if not already started
+    # Start face detection recording if not already started on port 1
     with camera_lock:
-        if not cam.recording:
+        # Check if detection recording is already running
+        # We can't directly check the port, so use a flag or try-except
+        try:
+            # Try to start detection recording on splitter port 1
             cam.start_recording(stream_output, format='mjpeg', splitter_port=1)
-        elif cam.splitter_port != 1:
-            try:
-                cam.start_recording(stream_output, format='mjpeg', splitter_port=1)
-            except:
-                pass  # Already recording on port 1
+        except picamera.exc.PiCameraAlreadyRecording:
+            # Already recording on port 1, which is fine
+            pass
+        except Exception as e:
+            # Log other errors but continue
+            print(f"Detection recording start error: {e}")
     
     def generate():
         while True:
