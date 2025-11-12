@@ -23,7 +23,7 @@ def get_camera():
     with camera_lock:
         if camera is None:
             camera = picamera.PiCamera(resolution=CAMERA_RES, framerate=CAMERA_FPS)
-            # Output with face detection for /camera page
+            # Output with face detection (only when requested)
             output = StreamingOutput(
                 face_server_url=WINDOWS_SERVER,
                 frame_skip=DETECTION_FRAME_SKIP,
@@ -31,7 +31,7 @@ def get_camera():
             )
             # Raw output without face detection for main page
             raw_output = StreamingOutput(face_server_url=None)
-            camera.start_recording(output, format='mjpeg', splitter_port=1)
+            # Start ONLY raw output by default (no detection)
             camera.start_recording(raw_output, format='mjpeg', splitter_port=2)
         return camera, output, raw_output
 
@@ -284,8 +284,18 @@ def video_feed():
 
 @app.route("/video_feed_detection")
 def video_feed_detection():
-    """Video streaming route with face detection for /camera page."""
-    _, stream_output, _ = get_camera()
+    """Video streaming route with face detection."""
+    cam, stream_output, _ = get_camera()
+    
+    # Start face detection recording if not already started
+    with camera_lock:
+        if not cam.recording:
+            cam.start_recording(stream_output, format='mjpeg', splitter_port=1)
+        elif cam.splitter_port != 1:
+            try:
+                cam.start_recording(stream_output, format='mjpeg', splitter_port=1)
+            except:
+                pass  # Already recording on port 1
     
     def generate():
         while True:
