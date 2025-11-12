@@ -89,6 +89,39 @@ body {
   min-width: 35px;
 }
 
+.distance-indicator {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 5px 12px;
+  border-radius: 15px;
+  border: 1px solid rgba(100, 181, 246, 0.2);
+}
+
+.distance-icon {
+  font-size: 1.2em;
+}
+
+.distance-text {
+  color: #e3f2fd;
+  font-size: 0.75em;
+  font-weight: 500;
+  min-width: 50px;
+}
+
+.distance-text.warning {
+  color: #ffa726;
+}
+
+.distance-text.danger {
+  color: #ef5350;
+}
+
 h1 {
   color: #64b5f6;
   font-size: 1.8em;
@@ -666,6 +699,10 @@ h1 {
 <body>
 <div class="header">
   <h1>IXLab iX.1</h1>
+  <div class="distance-indicator">
+    <span class="distance-icon">📏</span>
+    <span class="distance-text" id="distanceText">--cm</span>
+  </div>
   <div class="battery-indicator">
     <div class="battery-icon">
       <div class="battery-fill" id="batteryFill"></div>
@@ -864,6 +901,7 @@ document.getElementById("liveStream").addEventListener("click", ()=>{
 // Battery level update
 const batteryFill = document.getElementById("batteryFill");
 const batteryText = document.getElementById("batteryText");
+const distanceText = document.getElementById("distanceText");
 
 async function updateBattery() {
   try {
@@ -889,9 +927,39 @@ async function updateBattery() {
   }
 }
 
+async function updateDistance() {
+  try {
+    const response = await fetch("/distance");
+    const data = await response.json();
+    
+    if (data.distance_cm !== null && data.distance_cm !== undefined) {
+      const distance = Math.round(data.distance_cm);
+      distanceText.textContent = `${distance}cm`;
+      
+      // Update color based on distance
+      distanceText.className = 'distance-text';
+      if (distance < 15) {
+        distanceText.classList.add('danger');
+      } else if (distance < 30) {
+        distanceText.classList.add('warning');
+      }
+    } else {
+      distanceText.textContent = "N/A";
+      distanceText.className = 'distance-text';
+    }
+  } catch (error) {
+    console.error("Error fetching distance:", error);
+    distanceText.textContent = "N/A";
+  }
+}
+
 // Update battery immediately and then every 30 seconds
 updateBattery();
 setInterval(updateBattery, 30000);
+
+// Update distance immediately and then every 2 seconds
+updateDistance();
+setInterval(updateDistance, 2000);
 
 // Chat functionality
 const chatInput = document.getElementById("chatInput");

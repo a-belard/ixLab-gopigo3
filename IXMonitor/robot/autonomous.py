@@ -8,7 +8,7 @@ import json
 import time
 from threading import Thread, Event
 from config import WINDOWS_SERVER_BASE
-from .movement import move_forward, move_backward, turn_left, turn_right, stop_robot
+from .movement import move_forward, move_backward, turn_left, turn_right, stop_robot, get_obstacle_distance
 
 # Autonomous control state
 autonomous_thread = None
@@ -22,21 +22,30 @@ def capture_frame_from_camera(camera_instance):
     return stream.read()
 
 def execute_action(action: str):
-    """Execute robot movement action"""
+    """Execute robot movement action with obstacle avoidance"""
     action = action.lower().strip()
     
     if action == "forward":
         print("Moving forward")
-        move_forward(distance_m=0.3, blocking=True)  # 30cm forward
+        # Check for obstacles before moving forward
+        distance = get_obstacle_distance()
+        if distance is not None and distance < 25:
+            print(f"Obstacle detected at {distance}cm - stopping")
+            stop_robot()
+            return False
+        result = move_forward(distance_m=0.3, blocking=True, check_obstacles=True)
+        if not result:
+            print("Obstacle encountered during movement")
+        return False
     elif action == "backward":
         print("Moving backward")
-        move_backward(distance_m=0.2, blocking=True)  # 20cm backward
+        move_backward(distance_m=0.2, blocking=True)
     elif action == "left":
         print("Turning left")
-        turn_left(angle_deg=30, blocking=True)  # 30 degrees
+        turn_left(angle_deg=30, blocking=True)
     elif action == "right":
         print("Turning right")
-        turn_right(angle_deg=30, blocking=True)  # 30 degrees
+        turn_right(angle_deg=30, blocking=True)
     elif action == "stop":
         print("Stopping")
         stop_robot()
@@ -100,6 +109,11 @@ def autonomous_navigation_loop(camera_instance, goal: str, max_actions: int = 20
     
     while not autonomous_stop_event.is_set() and action_count < max_actions:
         try:
+            # Check for obstacles before capturing frame
+            distance = get_obstacle_distance()
+            if distance is not None:
+                print(f"Distance sensor: {distance}cm")
+            
             # Capture current frame
             print(f"\n[Action {action_count + 1}/{max_actions}]")
             print("Capturing frame...")

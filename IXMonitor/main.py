@@ -218,6 +218,16 @@ def autonomous_status():
         "message": "Autonomous mode is active" if is_active else "Autonomous mode is inactive"
     })
 
+@app.route("/distance", methods=["GET"])
+def get_distance():
+    """Get current distance sensor reading"""
+    from robot.movement import get_obstacle_distance
+    distance = get_obstacle_distance()
+    return jsonify({
+        "distance_cm": distance,
+        "obstacle_detected": distance is not None and distance < 30
+    })
+
 # -----------------
 # Vision Analysis API
 # -----------------
