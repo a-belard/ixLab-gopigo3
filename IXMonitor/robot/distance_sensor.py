@@ -18,6 +18,7 @@ class EasyDistanceSensor(distance_sensor.DistanceSensor):
         """
         self.descriptor = "Distance Sensor"
         self.use_mutex = use_mutex
+        self.readings = []  # Store last 3 readings for averaging
 
         # Port mapping
         possible_ports = {
@@ -48,7 +49,6 @@ class EasyDistanceSensor(distance_sensor.DistanceSensor):
         Range: 5-2300mm, returns 3000 if out of range.
         """
         mm = 8190
-        readings = []
         attempt = 0
 
         # Try 3 times to get a valid reading
@@ -64,15 +64,17 @@ class EasyDistanceSensor(distance_sensor.DistanceSensor):
             attempt += 1
             time.sleep(0.001)
 
-        # Track last 3 readings for averaging
-        if (mm < 8000 and mm > 5) or mm == 0:
-            readings.append(mm)
-        if len(readings) > 3:
-            readings.pop(0)
-
-        # Calculate average
-        if len(readings) > 1:
-            mm = round(sum(readings) / float(len(readings)))
+        # Add valid reading to history for averaging
+        if mm < 8000 and mm > 5:
+            self.readings.append(mm)
+            if len(self.readings) > 3:
+                self.readings.pop(0)
+        
+        # If we have readings, use average; otherwise use current reading
+        if len(self.readings) > 0:
+            mm = round(sum(self.readings) / float(len(self.readings)))
+        
+        # Cap at 3000mm (300cm)
         if mm > 3000:
             mm = 3000
 
@@ -103,10 +105,14 @@ def get_distance_sensor():
     global _distance_sensor_instance
     if _distance_sensor_instance is None:
         try:
+            print("Initializing distance sensor on I2C...")
             _distance_sensor_instance = EasyDistanceSensor(port="I2C", use_mutex=True)
-            print("Distance sensor initialized")
+            # Test read to verify it's working
+            test_reading = _distance_sensor_instance.read()
+            print(f"Distance sensor initialized successfully - test reading: {test_reading}cm")
         except Exception as e:
             print(f"Warning: Could not initialize distance sensor: {e}")
+            print("Sensor will be disabled. Check connections and try again.")
             _distance_sensor_instance = None
     return _distance_sensor_instance
 
@@ -133,14 +139,18 @@ def is_obstacle_detected(threshold_cm=30):
 def get_distance():
     """
     Get current distance reading in centimeters.
-    Returns None if sensor not available.
+    Returns None if sensor not available or reading failed.
     """
     sensor = get_distance_sensor()
     if sensor is None:
         return None
     
     try:
-        return sensor.read()
+        distance = sensor.read()
+        # If distance is 0, it usually means sensor error - return None
+        if distance == 0:
+            return None
+        return distance
     except Exception as e:
         print(f"Error reading distance: {e}")
         return None
