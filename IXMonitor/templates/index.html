@@ -707,6 +707,7 @@ h1 {
 
     <!-- Chat Section -->
     <div class="chat-section">
+      <div class="section-title">Chat Interface</div>
       <div class="chat-input-area">
         <input type="text" id="chatInput" class="chat-input" placeholder="...">
       </div>
@@ -718,6 +719,28 @@ h1 {
           <span id="recordBtnText">Record</span>
         </button>
       </div>
+    </div>
+
+    <!-- Autonomous Navigation Section -->
+    <div class="chat-section">
+      <div class="section-title">Autonomous Navigation</div>
+      <div class="chat-input-area">
+        <input type="text" id="autonomousGoal" class="chat-input" placeholder="e.g., Find a person, Explore the room, Navigate to the door">
+      </div>
+      <div class="chat-buttons">
+        <button id="startAutonomousBtn" class="chat-btn" style="background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);">
+          Start
+        </button>
+        <button id="stopAutonomousBtn" class="chat-btn" style="background: linear-gradient(135deg, #e53935 0%, #c62828 100%);">
+          Stop
+        </button>
+      </div>
+      <div class="chat-buttons" style="margin-top: 10px;">
+        <button id="analyzeViewBtn" class="chat-btn" style="background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);">
+          Analyze View
+        </button>
+      </div>
+      <div class="chat-status" id="autonomousStatus">Autonomous mode: Inactive</div>
     </div>
   </div>
 </div>
@@ -980,6 +1003,165 @@ recordBtn.addEventListener("click", toggleRecording);
 chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     sendTextMessage();
+  }
+});
+
+// Autonomous Navigation functionality
+const autonomousGoal = document.getElementById("autonomousGoal");
+const startAutonomousBtn = document.getElementById("startAutonomousBtn");
+const stopAutonomousBtn = document.getElementById("stopAutonomousBtn");
+const analyzeViewBtn = document.getElementById("analyzeViewBtn");
+const autonomousStatus = document.getElementById("autonomousStatus");
+
+let statusCheckInterval = null;
+
+// Start autonomous navigation
+async function startAutonomous() {
+  const goal = autonomousGoal.value.trim();
+  if (!goal) {
+    autonomousStatus.textContent = "Please enter a goal first";
+    autonomousStatus.className = "chat-status error";
+    return;
+  }
+
+  startAutonomousBtn.disabled = true;
+  autonomousStatus.textContent = "Starting autonomous mode...";
+  autonomousStatus.className = "chat-status";
+
+  try {
+    const response = await fetch("/autonomous/start", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ 
+        goal: goal,
+        max_actions: 20
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      autonomousStatus.textContent = `Autonomous mode active - Goal: ${goal}`;
+      autonomousStatus.className = "chat-status success";
+      
+      // Start polling status
+      if (statusCheckInterval) clearInterval(statusCheckInterval);
+      statusCheckInterval = setInterval(checkAutonomousStatus, 2000);
+    } else {
+      autonomousStatus.textContent = "Failed to start: " + (data.error || "Unknown error");
+      autonomousStatus.className = "chat-status error";
+    }
+  } catch (error) {
+    autonomousStatus.textContent = "Error: " + error.message;
+    autonomousStatus.className = "chat-status error";
+  } finally {
+    startAutonomousBtn.disabled = false;
+  }
+}
+
+// Stop autonomous navigation
+async function stopAutonomous() {
+  stopAutonomousBtn.disabled = true;
+  autonomousStatus.textContent = "Stopping autonomous mode...";
+  autonomousStatus.className = "chat-status";
+
+  try {
+    const response = await fetch("/autonomous/stop", {method: "POST"});
+    const data = await response.json();
+
+    if (data.success) {
+      autonomousStatus.textContent = "Autonomous mode stopped";
+      autonomousStatus.className = "chat-status";
+      
+      // Stop polling
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+        statusCheckInterval = null;
+      }
+    }
+  } catch (error) {
+    autonomousStatus.textContent = "Error stopping: " + error.message;
+    autonomousStatus.className = "chat-status error";
+  } finally {
+    stopAutonomousBtn.disabled = false;
+  }
+}
+
+// Check autonomous status
+async function checkAutonomousStatus() {
+  try {
+    const response = await fetch("/autonomous/status");
+    const data = await response.json();
+    
+    if (!data.active && statusCheckInterval) {
+      // Autonomous mode finished
+      clearInterval(statusCheckInterval);
+      statusCheckInterval = null;
+      autonomousStatus.textContent = "Autonomous navigation completed";
+      autonomousStatus.className = "chat-status success";
+    }
+  } catch (error) {
+    console.error("Error checking status:", error);
+  }
+}
+
+// Analyze current view
+async function analyzeView() {
+  analyzeViewBtn.disabled = true;
+  autonomousStatus.textContent = "Analyzing camera view...";
+  autonomousStatus.className = "chat-status";
+
+  try {
+    const response = await fetch("/vision/analyze", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ 
+        prompt: "Describe what you see in detail. Identify objects, people, and spatial layout."
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Display description (truncate if too long)
+      let desc = data.description;
+      if (desc.length > 150) {
+        desc = desc.substring(0, 150) + "...";
+      }
+      autonomousStatus.textContent = "Vision: " + desc;
+      autonomousStatus.className = "chat-status success";
+      
+      // Also speak it if audio is available
+      if (data.description) {
+        fetch("/chat/text", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ 
+            text: "I can see: " + data.description,
+            speak: true
+          })
+        });
+      }
+    } else {
+      autonomousStatus.textContent = "Analysis failed: " + (data.error || "Unknown error");
+      autonomousStatus.className = "chat-status error";
+    }
+  } catch (error) {
+    autonomousStatus.textContent = "Error: " + error.message;
+    autonomousStatus.className = "chat-status error";
+  } finally {
+    analyzeViewBtn.disabled = false;
+  }
+}
+
+// Event listeners for autonomous controls
+startAutonomousBtn.addEventListener("click", startAutonomous);
+stopAutonomousBtn.addEventListener("click", stopAutonomous);
+analyzeViewBtn.addEventListener("click", analyzeView);
+
+autonomousGoal.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    startAutonomous();
   }
 });
 </script>

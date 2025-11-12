@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, render_template, Response
 from threading import Thread, Lock
 from robot import movement
 from robot.camera import StreamingOutput
+from robot import autonomous
 from config import WINDOWS_SERVER, CAMERA_RES, CAMERA_FPS, DETECTION_FRAME_SKIP, DETECTION_TIMEOUT
 import picamera
 
@@ -184,6 +185,73 @@ def chat_reset():
     from robot.audio import reset_conversation
     result = reset_conversation()
     return jsonify(result)
+
+# -----------------
+# Autonomous Navigation API
+# -----------------
+@app.route("/autonomous/start", methods=["POST"])
+def start_autonomous():
+    """Start vision-guided autonomous navigation"""
+    data = request.get_json()
+    goal = data.get("goal", "Explore the environment")
+    max_actions = data.get("max_actions", 20)
+    
+    # Get camera instance
+    cam, _, _ = get_camera()
+    
+    # Start autonomous mode
+    result = autonomous.start_autonomous_mode(cam, goal, max_actions)
+    return jsonify(result)
+
+@app.route("/autonomous/stop", methods=["POST"])
+def stop_autonomous():
+    """Stop autonomous navigation"""
+    result = autonomous.stop_autonomous_mode()
+    return jsonify(result)
+
+@app.route("/autonomous/status", methods=["GET"])
+def autonomous_status():
+    """Get autonomous mode status"""
+    is_active = autonomous.is_autonomous_active()
+    return jsonify({
+        "active": is_active,
+        "message": "Autonomous mode is active" if is_active else "Autonomous mode is inactive"
+    })
+
+# -----------------
+# Vision Analysis API
+# -----------------
+@app.route("/vision/analyze", methods=["POST"])
+def vision_analyze():
+    """Analyze current camera view"""
+    from robot.autonomous import capture_frame_from_camera
+    import requests
+    from config import WINDOWS_SERVER_BASE
+    
+    data = request.get_json() or {}
+    prompt = data.get("prompt", "Describe what you see in detail")
+    
+    try:
+        # Get camera and capture frame
+        cam, _, _ = get_camera()
+        frame_bytes = capture_frame_from_camera(cam)
+        
+        # Send to Windows server for analysis
+        files = {'image': ('frame.jpg', frame_bytes, 'image/jpeg')}
+        form_data = {'prompt': prompt}
+        
+        response = requests.post(
+            f"{WINDOWS_SERVER_BASE}/vision/analyze",
+            files=files,
+            data=form_data,
+            timeout=15
+        )
+        response.raise_for_status()
+        
+        return jsonify(response.json())
+        
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # -----------------
 # Pages
