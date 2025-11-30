@@ -16,6 +16,7 @@ camera_lock = Lock()
 camera = None
 output = None
 raw_output = None
+auto_greet_active = False  # Global flag for auto-greet mode
 
 def get_camera():
     """Get or initialize the single camera instance."""
@@ -226,6 +227,179 @@ def get_distance():
     return jsonify({
         "distance_cm": distance,
         "obstacle_detected": distance is not None and distance < 30
+    })
+
+@app.route("/greet_person", methods=["POST"])
+def greet_person():
+    """
+    Greeting behavior: Move forward 5 steps when person detected,
+    say greeting, then move back 5 steps.
+    """
+    from robot.audio import play_audio_message
+    import time
+    
+    def greeting_sequence():
+        try:
+            # Move forward 5 steps
+            print("Person detected! Moving forward...")
+            for step in range(5):
+                movement.move_forward(distance_m=0.1, blocking=True, check_obstacles=False)
+                time.sleep(0.2)
+            
+            # Stop and greet
+            movement.stop_robot()
+            time.sleep(0.5)
+            
+            print("Playing greeting message...")
+            play_audio_message("Hello Stranger, Welcome to IX Lab", voice="en-us+f3")
+            
+            time.sleep(1)
+            
+            # Move backward 5 steps
+            print("Moving back to original position...")
+            for step in range(5):
+                movement.move_backward(distance_m=0.1, blocking=True)
+                time.sleep(0.2)
+            
+            movement.stop_robot()
+            print("Greeting sequence completed!")
+            
+        except Exception as e:
+            print(f"Error in greeting sequence: {e}")
+            movement.stop_robot()
+    
+    # Run in background thread
+    Thread(target=greeting_sequence).start()
+    
+    return jsonify({
+        "status": "Greeting sequence started",
+        "message": "Robot will move forward, greet, and return"
+    })
+
+
+@app.route("/auto_greet/start", methods=["POST"])
+def start_auto_greet():
+    """
+    Start automatic greeting mode: continuously monitor for people
+    and trigger greeting sequence when detected.
+    """
+    from robot.autonomous import capture_frame_from_camera
+    import requests
+    from config import WINDOWS_SERVER_BASE
+    import time
+    
+    global auto_greet_active
+    auto_greet_active = True
+    
+    def auto_greet_loop():
+        global auto_greet_active
+        print("Starting auto-greet monitoring...")
+        last_greet_time = 0
+        cooldown_period = 30  # 30 seconds between greetings
+        
+        try:
+            cam, _, _ = get_camera()
+            
+            while auto_greet_active:
+                try:
+                    # Capture frame
+                    frame_bytes = capture_frame_from_camera(cam)
+                    
+                    # Check for person via Windows server
+                    files = {'image': ('frame.jpg', frame_bytes, 'image/jpeg')}
+                    response = requests.post(
+                        f"{WINDOWS_SERVER_BASE}/detect/check_person",
+                        files=files,
+                        timeout=5
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        person_detected = result.get("person_detected", False)
+                        
+                        if person_detected:
+                            current_time = time.time()
+                            if current_time - last_greet_time >= cooldown_period:
+                                print(f"Person detected! Triggering greeting...")
+                                # Trigger greeting sequence
+                                greeting_sequence()
+                                last_greet_time = current_time
+                            else:
+                                print("Person detected but in cooldown period")
+                    
+                    time.sleep(2)  # Check every 2 seconds
+                    
+                except Exception as e:
+                    print(f"Error in auto-greet loop: {e}")
+                    time.sleep(2)
+                    
+        except Exception as e:
+            print(f"Fatal error in auto-greet: {e}")
+        finally:
+            auto_greet_active = False
+            print("Auto-greet monitoring stopped")
+    
+    def greeting_sequence():
+        """Internal greeting sequence for auto-greet"""
+        from robot.audio import play_audio_message
+        import time
+        
+        try:
+            # Move forward 5 steps
+            print("Moving forward...")
+            for step in range(5):
+                movement.move_forward(distance_m=0.1, blocking=True, check_obstacles=False)
+                time.sleep(0.2)
+            
+            movement.stop_robot()
+            time.sleep(0.5)
+            
+            # Greet
+            print("Playing greeting...")
+            play_audio_message("Hello Stranger, Welcome to IX Lab", voice="en-us+f3")
+            time.sleep(1)
+            
+            # Move backward 5 steps
+            print("Moving back...")
+            for step in range(5):
+                movement.move_backward(distance_m=0.1, blocking=True)
+                time.sleep(0.2)
+            
+            movement.stop_robot()
+            print("Greeting completed!")
+            
+        except Exception as e:
+            print(f"Error in greeting sequence: {e}")
+            movement.stop_robot()
+    
+    # Start monitoring in background
+    Thread(target=auto_greet_loop, daemon=True).start()
+    
+    return jsonify({
+        "status": "Auto-greet mode started",
+        "message": "Monitoring for people to greet"
+    })
+
+
+@app.route("/auto_greet/stop", methods=["POST"])
+def stop_auto_greet():
+    """Stop automatic greeting mode."""
+    global auto_greet_active
+    auto_greet_active = False
+    
+    return jsonify({
+        "status": "Auto-greet mode stopped"
+    })
+
+
+@app.route("/auto_greet/status", methods=["GET"])
+def auto_greet_status():
+    """Get auto-greet mode status."""
+    global auto_greet_active
+    
+    return jsonify({
+        "active": auto_greet_active,
+        "message": "Auto-greet is active" if auto_greet_active else "Auto-greet is inactive"
     })
 
 # -----------------

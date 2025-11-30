@@ -744,16 +744,13 @@ h1 {
 
     <!-- Chat Section -->
     <div class="chat-section">
-      <div class="section-title">Chat Interface</div>
+      <div class="section-title">Convo Interface</div>
       <div class="chat-input-area">
         <input type="text" id="chatInput" class="chat-input" placeholder="...">
       </div>
       <div class="chat-buttons">
         <button id="sendTextBtn" class="chat-btn">
           Send
-        </button>
-        <button id="recordBtn" class="chat-btn">
-          <span id="recordBtnText">Record</span>
         </button>
       </div>
     </div>
@@ -778,6 +775,15 @@ h1 {
         </button>
       </div>
       <div class="chat-status" id="autonomousStatus">Autonomous mode: Inactive</div>
+    </div>
+
+    <div class="chat-section">
+      <div class="chat-buttons">
+        <button id="toggleAutoGreetBtn" class="chat-btn" style="background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);">
+          Start Auto-Greet
+        </button>
+      </div>
+      <div class="chat-status" id="autoGreetStatus">Auto-greet: Inactive</div>
     </div>
   </div>
 </div>
@@ -1232,6 +1238,110 @@ autonomousGoal.addEventListener("keypress", (e) => {
     startAutonomous();
   }
 });
+
+// ======================================
+// Auto-Greet Mode Functions
+// ======================================
+const toggleAutoGreetBtn = document.getElementById("toggleAutoGreetBtn");
+const autoGreetStatus = document.getElementById("autoGreetStatus");
+let autoGreetActive = false;
+let autoGreetCheckInterval = null;
+
+// Toggle auto-greet mode on/off
+async function toggleAutoGreet() {
+  if (autoGreetActive) {
+    // Currently active, so stop it
+    await stopAutoGreet();
+  } else {
+    // Currently inactive, so start it
+    await startAutoGreet();
+  }
+}
+
+// Start auto-greet mode
+async function startAutoGreet() {
+  toggleAutoGreetBtn.disabled = true;
+  autoGreetStatus.textContent = "Starting auto-greet mode...";
+  autoGreetStatus.className = "chat-status";
+
+  try {
+    const response = await fetch("/auto_greet/start", {method: "POST"});
+    const data = await response.json();
+
+    autoGreetActive = true;
+    autoGreetStatus.textContent = "Auto-greet: Active - Monitoring for people";
+    autoGreetStatus.className = "chat-status success";
+    
+    // Update button appearance
+    toggleAutoGreetBtn.textContent = "Stop Auto-Greet";
+    toggleAutoGreetBtn.style.background = "linear-gradient(135deg, #e53935 0%, #c62828 100%)";
+    
+    // Poll status every 5 seconds
+    autoGreetCheckInterval = setInterval(checkAutoGreetStatus, 5000);
+  } catch (error) {
+    autoGreetStatus.textContent = "Error: " + error.message;
+    autoGreetStatus.className = "chat-status error";
+    autoGreetActive = false;
+  } finally {
+    toggleAutoGreetBtn.disabled = false;
+  }
+}
+
+// Stop auto-greet mode
+async function stopAutoGreet() {
+  toggleAutoGreetBtn.disabled = true;
+  autoGreetStatus.textContent = "Stopping auto-greet mode...";
+  autoGreetStatus.className = "chat-status";
+
+  try {
+    const response = await fetch("/auto_greet/stop", {method: "POST"});
+    const data = await response.json();
+
+    autoGreetActive = false;
+    autoGreetStatus.textContent = "Auto-greet: Inactive";
+    autoGreetStatus.className = "chat-status";
+    
+    // Update button appearance
+    toggleAutoGreetBtn.textContent = "Start Auto-Greet";
+    toggleAutoGreetBtn.style.background = "linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%)";
+    
+    // Stop polling
+    if (autoGreetCheckInterval) {
+      clearInterval(autoGreetCheckInterval);
+      autoGreetCheckInterval = null;
+    }
+  } catch (error) {
+    autoGreetStatus.textContent = "Error: " + error.message;
+    autoGreetStatus.className = "chat-status error";
+  } finally {
+    toggleAutoGreetBtn.disabled = false;
+  }
+}
+
+// Check auto-greet status
+async function checkAutoGreetStatus() {
+  try {
+    const response = await fetch("/auto_greet/status");
+    const data = await response.json();
+    
+    if (!data.active && autoGreetActive) {
+      // Server says inactive but client thinks it's active - sync state
+      autoGreetActive = false;
+      clearInterval(autoGreetCheckInterval);
+      autoGreetCheckInterval = null;
+      autoGreetStatus.textContent = "Auto-greet: Inactive";
+      autoGreetStatus.className = "chat-status";
+      toggleAutoGreetBtn.textContent = "Start Auto-Greet";
+      toggleAutoGreetBtn.style.background = "linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%)";
+    }
+  } catch (error) {
+    console.error("Error checking auto-greet status:", error);
+  }
+}
+
+// Event listener for toggle button
+toggleAutoGreetBtn.addEventListener("click", toggleAutoGreet);
+
 </script>
 </body>
 </html>
