@@ -774,16 +774,20 @@ h1 {
           Analyze View
         </button>
       </div>
-      <div class="chat-status" id="autonomousStatus">Autonomous mode: Inactive</div>
+      <div class="chat-status" id="autonomousStatus">Inactive</div>
     </div>
 
+    <!-- Auto-Greet Section -->
     <div class="chat-section">
       <div class="chat-buttons">
         <button id="toggleAutoGreetBtn" class="chat-btn" style="background: linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%);">
           Start Auto-Greet
         </button>
       </div>
-      <div class="chat-status" id="autoGreetStatus">Auto-greet: Inactive</div>
+      <div class="chat-status" id="autoGreetStatus">
+        <span id="autoGreetState">Inactive</span>
+        <span id="autoGreetInfo"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -1244,11 +1248,14 @@ autonomousGoal.addEventListener("keypress", (e) => {
 // ======================================
 const toggleAutoGreetBtn = document.getElementById("toggleAutoGreetBtn");
 const autoGreetStatus = document.getElementById("autoGreetStatus");
+const autoGreetState = document.getElementById("autoGreetState");
+const autoGreetInfo = document.getElementById("autoGreetInfo");
 let autoGreetActive = false;
 let autoGreetCheckInterval = null;
 
 // Toggle auto-greet mode on/off
 async function toggleAutoGreet() {
+  console.log("toggleAutoGreet called, current state:", autoGreetActive);
   if (autoGreetActive) {
     // Currently active, so stop it
     await stopAutoGreet();
@@ -1260,16 +1267,20 @@ async function toggleAutoGreet() {
 
 // Start auto-greet mode
 async function startAutoGreet() {
+  console.log("Starting auto-greet mode...");
   toggleAutoGreetBtn.disabled = true;
-  autoGreetStatus.textContent = "Starting auto-greet mode...";
+  autoGreetState.textContent = "Starting...";
+  autoGreetInfo.textContent = "Please wait";
   autoGreetStatus.className = "chat-status";
 
   try {
     const response = await fetch("/auto_greet/start", {method: "POST"});
     const data = await response.json();
+    console.log("Auto-greet start response:", data);
 
     autoGreetActive = true;
-    autoGreetStatus.textContent = "Auto-greet: Active - Monitoring for people";
+    autoGreetState.textContent = "ACTIVE";
+    autoGreetInfo.textContent = "Monitoring for people";
     autoGreetStatus.className = "chat-status success";
     
     // Update button appearance
@@ -1278,8 +1289,11 @@ async function startAutoGreet() {
     
     // Poll status every 5 seconds
     autoGreetCheckInterval = setInterval(checkAutoGreetStatus, 5000);
+    console.log("Auto-greet mode activated, interval started");
   } catch (error) {
-    autoGreetStatus.textContent = "Error: " + error.message;
+    console.error("Error starting auto-greet:", error);
+    autoGreetState.textContent = "Error";
+    autoGreetInfo.textContent = error.message;
     autoGreetStatus.className = "chat-status error";
     autoGreetActive = false;
   } finally {
@@ -1289,16 +1303,20 @@ async function startAutoGreet() {
 
 // Stop auto-greet mode
 async function stopAutoGreet() {
+  console.log("Stopping auto-greet mode...");
   toggleAutoGreetBtn.disabled = true;
-  autoGreetStatus.textContent = "Stopping auto-greet mode...";
+  autoGreetState.textContent = "Stopping...";
+  autoGreetInfo.textContent = "Please wait";
   autoGreetStatus.className = "chat-status";
 
   try {
     const response = await fetch("/auto_greet/stop", {method: "POST"});
     const data = await response.json();
+    console.log("Auto-greet stop response:", data);
 
     autoGreetActive = false;
-    autoGreetStatus.textContent = "Auto-greet: Inactive";
+    autoGreetState.textContent = "Inactive";
+    autoGreetInfo.textContent = "Click Start to begin monitoring";
     autoGreetStatus.className = "chat-status";
     
     // Update button appearance
@@ -1309,9 +1327,12 @@ async function stopAutoGreet() {
     if (autoGreetCheckInterval) {
       clearInterval(autoGreetCheckInterval);
       autoGreetCheckInterval = null;
+      console.log("Auto-greet interval cleared");
     }
   } catch (error) {
-    autoGreetStatus.textContent = "Error: " + error.message;
+    console.error("Error stopping auto-greet:", error);
+    autoGreetState.textContent = "Error";
+    autoGreetInfo.textContent = error.message;
     autoGreetStatus.className = "chat-status error";
   } finally {
     toggleAutoGreetBtn.disabled = false;
@@ -1323,16 +1344,24 @@ async function checkAutoGreetStatus() {
   try {
     const response = await fetch("/auto_greet/status");
     const data = await response.json();
+    console.log("Status check:", data);
     
     if (!data.active && autoGreetActive) {
       // Server says inactive but client thinks it's active - sync state
+      console.log("Server inactive, syncing client state");
       autoGreetActive = false;
       clearInterval(autoGreetCheckInterval);
       autoGreetCheckInterval = null;
-      autoGreetStatus.textContent = "Auto-greet: Inactive";
+      autoGreetState.textContent = "Inactive";
+      autoGreetInfo.textContent = "Stopped by server";
       autoGreetStatus.className = "chat-status";
       toggleAutoGreetBtn.textContent = "Start Auto-Greet";
       toggleAutoGreetBtn.style.background = "linear-gradient(135deg, #8e24aa 0%, #6a1b9a 100%)";
+    } else if (data.active && autoGreetActive) {
+      // Both agree it's active - update info
+      autoGreetState.textContent = "ACTIVE";
+      autoGreetInfo.textContent = "Monitoring for people";
+      autoGreetStatus.className = "chat-status success";
     }
   } catch (error) {
     console.error("Error checking auto-greet status:", error);
@@ -1341,6 +1370,7 @@ async function checkAutoGreetStatus() {
 
 // Event listener for toggle button
 toggleAutoGreetBtn.addEventListener("click", toggleAutoGreet);
+console.log("Auto-greet event listener attached to button");
 
 </script>
 </body>
