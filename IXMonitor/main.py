@@ -226,7 +226,7 @@ def get_distance():
     distance = get_obstacle_distance()
     return jsonify({
         "distance_cm": distance,
-        "obstacle_detected": distance is not None and distance < 30
+        "obstacle_detected": False
     })
 
 @app.route("/greet_person", methods=["POST"])
