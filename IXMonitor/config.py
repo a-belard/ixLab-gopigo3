@@ -1,5 +1,5 @@
 # Config variables
-WINDOWS_SERVER_BASE = "http://172.20.86.247:8000"
+WINDOWS_SERVER_BASE = "http://172.20.84.160:8000"
 WINDOWS_SERVER = f"{WINDOWS_SERVER_BASE}/detect"
 ROBOT_STEP = 0.1          # meters per step
 TURN_ANGLE = 10           # degrees per step
